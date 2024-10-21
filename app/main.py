@@ -2,7 +2,7 @@ import time
 import psycopg2
 from fastapi import FastAPI
 from psycopg2.extras import RealDictCursor
-from .routers import post, user
+from .routers import post, user, auth
 from . import models
 from app.database import engine
 
@@ -25,6 +25,7 @@ while True:
 
 app.include_router(post.router)
 app.include_router(user.router)
+app.include_router(auth.router)
 @app.get("/")
 def root():
     return {"message": "Hello World"}
