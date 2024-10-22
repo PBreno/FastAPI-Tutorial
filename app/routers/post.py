@@ -16,13 +16,18 @@ router = APIRouter(
 )
 @router.get("/", response_model=List[schemas.Post])
 def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+
+    #Filtro para pegar somente o post do usuário logado
+    #posts = db.query(models.Post).filter(models.Post.owner_id == current_user.id).all()
+
     posts = db.query(models.Post).all()
     return posts
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
 def create_posts(post: PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
-    new_post = models.Post(**post.model_dump())
+
+    new_post = models.Post(owner_id=current_user.id, **post.model_dump())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
@@ -41,14 +46,18 @@ def get_post(id: int, db: Session = Depends(get_db),  current_user: int = Depend
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db),  current_user: int = Depends(oauth2.get_current_user)):
-    deleted_post = db.query(models.Post).filter(models.Post.id == id)
+def delete_post(id: int, db: Session = Depends(get_db),  current_user:  int = Depends(oauth2.get_current_user)):
+    post = db.query(models.Post).filter(models.Post.id == id)
 
-    if deleted_post.first() is None:
+    if post.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Post with id: {id}, not exist")
 
-    deleted_post.delete(synchronize_session=False)
+    if post.first().owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"You are not the owner of post with id: {id}")
+
+    post.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -60,6 +69,10 @@ def update_post(id: int, post: PostCreate, db: Session = Depends(get_db),  curre
     if updated_post.first() is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Post with id: {id}, not exist")
+
+    if updated_post.first().owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"You are not the owner of post with id: {id}")
 
     updated_post.update(post.model_dump())
     db.commit()
