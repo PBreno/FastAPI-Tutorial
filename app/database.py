@@ -1,7 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-SQLALCHEMY_DATABASE_URL = f'postgresql://postgres:postgres@localhost:5432/fastapi'
+from app.config import settings
+
+SQLALCHEMY_DATABASE_URL = (f'postgresql://{settings.database_username}:'
+                           f'{settings.database_password}@'
+                           f'{settings.database_host}:{settings.database_port}/'
+                           f'{settings.database_name}')
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -14,3 +19,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# while True:
+#
+#     try:
+#         conn = psycopg2.connect(host='localhost', database='fastapi',
+#                                 user='postgres', password='postgres', cursor_factory=RealDictCursor)
+#         cursor = conn.cursor()
+#         print("Connect!")
+#         break
+#     except Exception as e:
+#         print(e)
+#         time.sleep(3)
